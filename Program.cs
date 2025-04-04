@@ -21,7 +21,7 @@ namespace CentralizePackageVersions
 
             if (!Directory.Exists(OriginalPath))
             {
-                Console.WriteLine("The provided directory does not exist.");
+                Console.WriteLine("# ERROR: The provided directory does not exist.");
                 return;
             }
 
@@ -51,7 +51,7 @@ namespace CentralizePackageVersions
             {
                 var sortedPackages = AllPackageReferences.OrderBy(x => x.Key).ToList();
 
-                string filePath = $"{OriginalPath}\\src\\Directory.Packages.props";
+                string filePath = $"{OriginalPath}\\Directory.Packages.props";
 
                 StringBuilder content = new();
                 content.AppendLine("<Project>");
@@ -84,7 +84,7 @@ namespace CentralizePackageVersions
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred while searching for .csproj files: {ex.Message}");
+                Console.WriteLine($"# ERROR: An error occurred while searching for .csproj files: {ex.Message}");
             }
 
             return csprojFiles;
@@ -139,14 +139,23 @@ namespace CentralizePackageVersions
         {
             var outerXml = packageReference.OuterXml.Replace("PackageReference", "PackageVersion");
 
-            var version = new Version(versionAttribute.Value);
-            var key = includeAttribute.InnerText;
-            var success = AllPackageReferences.TryAdd(key, new PackageInfo(outerXml, version));
-
-            // Ensure that the latest version is persisted at the PackageVersion node.
-            if (!success && version > AllPackageReferences[key].Version)
+            try
             {
-                AllPackageReferences[key] = new PackageInfo(outerXml, version);
+                var version = new Version(versionAttribute.Value);
+                var key = includeAttribute.InnerText;
+                var success = AllPackageReferences.TryAdd(key, new PackageInfo(outerXml, version));
+
+                // Ensure that the latest version is persisted at the PackageVersion node.
+                if (!success && version > AllPackageReferences[key].Version)
+                {
+                    AllPackageReferences[key] = new PackageInfo(outerXml, version);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"# ERROR: Failure while processing Package: {includeAttribute.Value}, Version: {versionAttribute.Value}. You will need to handle it manually");
+                Console.WriteLine(ex.Message);
+                Console.WriteLine("# # #");
             }
         }
     }
